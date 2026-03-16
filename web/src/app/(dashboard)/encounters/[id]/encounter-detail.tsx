@@ -8,6 +8,7 @@ import { encounterKeys } from "@/hooks/use-encounters";
 import { ProcessingStatus } from "@/components/encounters/processing-status";
 import { NoteEditor } from "@/components/notes/note-editor";
 import { SummaryPreview } from "@/components/encounters/summary-preview";
+import { QualityScoreDetail } from "@/components/quality/quality-score-detail";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,6 +167,13 @@ export function EncounterDetail({ encounterId }: EncounterDetailProps) {
               queryKey: encounterKeys.detail(encounterId),
             })
           }
+        />
+      )}
+
+      {note && (
+        <QualityScoreDetail
+          encounterId={encounterId}
+          enabled={!!note}
         />
       )}
 

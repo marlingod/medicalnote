@@ -12,12 +12,14 @@ import {
   Settings,
   LogOut,
   Stethoscope,
+  LayoutTemplate,
 } from "lucide-react";
 
 const navItems = [
   { href: "/encounters", label: "Encounters", icon: FileText },
   { href: "/encounters/new", label: "New Encounter", icon: PlusCircle },
   { href: "/patients", label: "Patients", icon: Users },
+  { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

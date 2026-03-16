@@ -20,6 +20,17 @@ import type {
   PracticeStats,
   AuditLogEntry,
   PaginatedResponse,
+  NoteTemplate,
+  NoteTemplateListItem,
+  CreateTemplateRequest,
+  UpdateTemplateRequest,
+  CloneTemplateRequest,
+  RateTemplateRequest,
+  AutoCompleteRequest,
+  AutoCompleteResponse,
+  TemplateRating,
+  SpecialtyInfo,
+  QualityScore,
 } from "@/types";
 
 function createAxiosInstance(): AxiosInstance {
@@ -197,6 +208,62 @@ export const apiClient = {
         .get<PaginatedResponse<AuditLogEntry>>("/practice/audit-log/", {
           params,
         })
+        .then((r) => r.data),
+  },
+
+  templates: {
+    list: (params?: Record<string, string>) =>
+      http
+        .get<PaginatedResponse<NoteTemplateListItem>>("/templates/", { params })
+        .then((r) => r.data),
+    get: (id: string) =>
+      http.get<NoteTemplate>(`/templates/${id}/`).then((r) => r.data),
+    create: (data: CreateTemplateRequest) =>
+      http.post<NoteTemplate>("/templates/", data).then((r) => r.data),
+    update: (id: string, data: UpdateTemplateRequest) =>
+      http.patch<NoteTemplate>(`/templates/${id}/`, data).then((r) => r.data),
+    delete: (id: string) =>
+      http.delete(`/templates/${id}/`).then((r) => r.data),
+    clone: (id: string, data?: CloneTemplateRequest) =>
+      http
+        .post<NoteTemplate>(`/templates/${id}/clone/`, data || {})
+        .then((r) => r.data),
+    rate: (id: string, data: RateTemplateRequest) =>
+      http
+        .post<TemplateRating>(`/templates/${id}/rate/`, data)
+        .then((r) => r.data),
+    favorite: (id: string) =>
+      http
+        .post<{ favorited: boolean }>(`/templates/${id}/favorite/`)
+        .then((r) => r.data),
+    unfavorite: (id: string) =>
+      http
+        .delete<{ favorited: boolean }>(`/templates/${id}/favorite/`)
+        .then((r) => r.data),
+    autoComplete: (id: string, data: AutoCompleteRequest) =>
+      http
+        .post<AutoCompleteResponse>(`/templates/${id}/auto-complete/`, data)
+        .then((r) => r.data),
+    getSpecialties: () =>
+      http
+        .get<SpecialtyInfo[]>("/templates/specialties/")
+        .then((r) => r.data),
+    getFavorites: (params?: Record<string, string>) =>
+      http
+        .get<PaginatedResponse<NoteTemplateListItem>>("/templates/favorites/", {
+          params,
+        })
+        .then((r) => r.data),
+  },
+
+  quality: {
+    get: (encounterId: string) =>
+      http
+        .get<QualityScore>(`/encounters/${encounterId}/quality/`)
+        .then((r) => r.data),
+    trigger: (encounterId: string) =>
+      http
+        .post<{ status: string }>(`/encounters/${encounterId}/quality/score/`)
         .then((r) => r.data),
   },
 };

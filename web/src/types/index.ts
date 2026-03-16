@@ -278,3 +278,164 @@ export interface AuditLogEntry {
   phi_accessed: boolean;
   created_at: string;
 }
+
+// ============ Specialty Types ============
+
+export type MedicalSpecialty =
+  | "primary_care"
+  | "dermatology"
+  | "psychiatry"
+  | "cardiology"
+  | "orthopedics"
+  | "pediatrics"
+  | "neurology"
+  | "gastroenterology"
+  | "general";
+
+export interface SpecialtyInfo {
+  value: MedicalSpecialty;
+  label: string;
+  template_count: number;
+}
+
+// ============ Template Types ============
+
+export type TemplateVisibility = "private" | "practice" | "public";
+export type TemplateStatus = "draft" | "published" | "archived";
+
+export interface TemplateSchemaField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "checklist" | "select";
+  required?: boolean;
+  ai_prompt?: string;
+  options?: string[];
+  conditional?: {
+    show_if?: Record<string, string>;
+  };
+}
+
+export interface TemplateSchemaSection {
+  key: string;
+  label: string;
+  fields: TemplateSchemaField[];
+  default_content?: string;
+}
+
+export interface TemplateSchema {
+  sections: TemplateSchemaSection[];
+  conditional_logic?: Array<{
+    if: Record<string, string>;
+    then: Record<string, string>;
+  }>;
+  ai_instructions?: string;
+}
+
+export interface TemplateRating {
+  id: string;
+  template: string;
+  user: string;
+  user_name: string;
+  score: number;
+  review: string;
+  created_at: string;
+}
+
+export interface NoteTemplateListItem {
+  id: string;
+  name: string;
+  description: string;
+  specialty: MedicalSpecialty;
+  note_type: NoteType;
+  visibility: TemplateVisibility;
+  status: TemplateStatus;
+  version: number;
+  tags: string[];
+  use_count: number;
+  clone_count: number;
+  average_rating: number | null;
+  rating_count: number;
+  is_favorited: boolean;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteTemplate extends NoteTemplateListItem {
+  schema: TemplateSchema;
+  ratings: TemplateRating[];
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  description?: string;
+  specialty: MedicalSpecialty;
+  note_type: NoteType;
+  schema: TemplateSchema;
+  visibility?: TemplateVisibility;
+  status?: TemplateStatus;
+  tags?: string[];
+}
+
+export interface UpdateTemplateRequest extends Partial<CreateTemplateRequest> {}
+
+export interface CloneTemplateRequest {
+  name?: string;
+}
+
+export interface RateTemplateRequest {
+  score: number;
+  review?: string;
+}
+
+export interface AutoCompleteRequest {
+  section_key: string;
+  field_key?: string;
+  encounter_context?: Record<string, unknown>;
+  partial_content?: string;
+}
+
+export interface AutoCompleteResponse {
+  content: string;
+  section_key: string;
+  field_key: string;
+}
+
+// ============ Quality Score Types ============
+
+export type QualityScoreLevel =
+  | "excellent"
+  | "good"
+  | "fair"
+  | "needs_improvement";
+
+export interface QualityCategoryScore {
+  score: number;
+  max_score: number;
+  items_found: string[];
+  items_missing: string[];
+}
+
+export interface QualityFinding {
+  category: string;
+  element: string;
+  status: "present" | "missing" | "partial";
+  detail?: string;
+  suggestion?: string;
+}
+
+export interface QualityScore {
+  id: string;
+  clinical_note: string;
+  encounter: string;
+  overall_score: number;
+  score_level: QualityScoreLevel;
+  category_scores: Record<string, QualityCategoryScore>;
+  findings: QualityFinding[];
+  suggestions: string[];
+  em_level_suggested: string;
+  em_level_documented: string;
+  rules_version: string;
+  scored_at: string;
+  updated_at: string;
+}

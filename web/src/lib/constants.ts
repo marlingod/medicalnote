@@ -24,3 +24,41 @@ export const ENCOUNTER_STATUSES = {
   note_generation_failed: "Note Generation Failed",
   summary_generation_failed: "Summary Generation Failed",
 } as const;
+
+export const SPECIALTY_LABELS: Record<string, string> = {
+  primary_care: "Primary Care",
+  dermatology: "Dermatology",
+  psychiatry: "Psychiatry",
+  cardiology: "Cardiology",
+  orthopedics: "Orthopedics",
+  pediatrics: "Pediatrics",
+  neurology: "Neurology",
+  gastroenterology: "Gastroenterology",
+  general: "General",
+} as const;
+
+export const QUALITY_SCORE_LEVELS: Record<string, string> = {
+  excellent: "Excellent",
+  good: "Good",
+  fair: "Fair",
+  needs_improvement: "Needs Improvement",
+} as const;
+
+export const QUALITY_SCORE_COLORS: Record<string, string> = {
+  excellent: "bg-green-100 text-green-800",
+  good: "bg-blue-100 text-blue-800",
+  fair: "bg-yellow-100 text-yellow-800",
+  needs_improvement: "bg-red-100 text-red-800",
+} as const;
+
+export const TEMPLATE_VISIBILITY_LABELS: Record<string, string> = {
+  private: "Private",
+  practice: "Practice",
+  public: "Public (Marketplace)",
+} as const;
+
+export const TEMPLATE_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  published: "Published",
+  archived: "Archived",
+} as const;

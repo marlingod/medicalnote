@@ -14,11 +14,13 @@ import {
   useDictationInput,
 } from "@/hooks/use-encounters";
 import { usePatients } from "@/hooks/use-patients";
+import { useTemplates } from "@/hooks/use-templates";
 import { AudioRecorder } from "@/components/encounters/audio-recorder";
 import { PasteInput } from "@/components/encounters/paste-input";
 import { ScanUpload } from "@/components/encounters/scan-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,7 +33,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { InputMethod } from "@/types";
+import { SPECIALTY_LABELS } from "@/lib/constants";
+import { LayoutTemplate, X } from "lucide-react";
+import type { InputMethod, NoteTemplateListItem } from "@/types";
 
 const encounterSchema = z.object({
   patient: z.string().min(1, "Patient is required"),
@@ -48,8 +52,10 @@ export function NewEncounterForm() {
   const [activeTab, setActiveTab] = useState<InputMethod>("paste");
   const [encounterId, setEncounterId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<NoteTemplateListItem | null>(null);
 
   const { data: patientsData } = usePatients();
+  const { data: templatesData } = useTemplates({ scope: "mine" });
   const createEncounter = useCreateEncounter();
   const pasteInput = usePasteInput();
   const uploadRecording = useUploadRecording();
@@ -179,6 +185,72 @@ export function NewEncounterForm() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Template Selection (Optional) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LayoutTemplate className="h-5 w-5" />
+            Template (Optional)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {selectedTemplate ? (
+            <div className="flex items-center justify-between rounded-md border p-3 bg-muted/50">
+              <div>
+                <p className="font-medium">{selectedTemplate.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {SPECIALTY_LABELS[selectedTemplate.specialty] || selectedTemplate.specialty}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground uppercase">
+                    {selectedTemplate.note_type.replace(/_/g, " ")}
+                  </span>
+                </div>
+                {selectedTemplate.description && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                    {selectedTemplate.description}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTemplate(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Optionally select a template to guide the AI note generation.
+              </p>
+              <Select
+                onValueChange={(value) => {
+                  if (value != null) {
+                    const template = templatesData?.results.find(
+                      (t) => t.id === String(value)
+                    );
+                    if (template) setSelectedTemplate(template);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templatesData?.results.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} ({SPECIALTY_LABELS[template.specialty] || template.specialty})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
 
