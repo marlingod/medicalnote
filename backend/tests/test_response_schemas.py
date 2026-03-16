@@ -506,7 +506,7 @@ PRACTICE_SCHEMA = {
     "type": "object",
     "required": [
         "id", "name", "address", "phone", "subscription_tier",
-        "white_label_config", "created_at", "updated_at",
+        "white_label_config", "llm_provider", "created_at", "updated_at",
     ],
     "properties": {
         "id": {"type": "string"},
@@ -518,6 +518,10 @@ PRACTICE_SCHEMA = {
             "enum": ["solo", "group", "enterprise"],
         },
         "white_label_config": {"type": ["object", "null"]},
+        "llm_provider": {
+            "type": "string",
+            "enum": ["claude", "gemini", "claude+gemini"],
+        },
         "created_at": {"type": "string"},
         "updated_at": {"type": "string"},
     },

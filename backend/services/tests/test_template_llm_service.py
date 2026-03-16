@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from services.template_llm_service import TemplateLLMService
 
 
+@override_settings(LLM_PROVIDER="claude", ANTHROPIC_API_KEY="test-key")
 class TemplateLLMServiceTest(TestCase):
     def _make_schema(self):
         return {
@@ -27,7 +28,7 @@ class TemplateLLMServiceTest(TestCase):
             "ai_instructions": "Focus on primary care documentation",
         }
 
-    @patch("services.template_llm_service.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_auto_complete_section_returns_content(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -49,7 +50,7 @@ class TemplateLLMServiceTest(TestCase):
         assert result["content"] == "Patient presents with headache for 3 days."
         assert result["confidence"] == 0.9
 
-    @patch("services.template_llm_service.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_auto_complete_uses_specialty_context(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -73,7 +74,7 @@ class TemplateLLMServiceTest(TestCase):
         call_args = mock_client.messages.create.call_args
         assert "Dermatology" in call_args.kwargs["system"]
 
-    @patch("services.template_llm_service.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_auto_complete_handles_partial_content(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -99,7 +100,7 @@ class TemplateLLMServiceTest(TestCase):
         user_content = call_args.kwargs["messages"][0]["content"]
         assert "Patient reports..." in user_content
 
-    @patch("services.template_llm_service.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_auto_complete_handles_api_error(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
