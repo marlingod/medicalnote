@@ -1,0 +1,45 @@
+{
+  "common": {
+    "appName": "MedicalNote",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "submit": "Enviar",
+    "search": "Buscar",
+    "noResults": "No se encontraron resultados"
+  },
+  "auth": {
+    "signIn": "Iniciar Sesion",
+    "signOut": "Cerrar Sesion",
+    "createAccount": "Crear Cuenta",
+    "email": "Correo Electronico",
+    "password": "Contrasena",
+    "forgotPassword": "Olvidaste tu contrasena?"
+  },
+  "encounters": {
+    "title": "Consultas",
+    "newEncounter": "Nueva Consulta",
+    "paste": "Pegar",
+    "record": "Grabar",
+    "dictate": "Dictar",
+    "scan": "Escanear",
+    "approve": "Aprobar Nota",
+    "sendToPatient": "Enviar al Paciente"
+  },
+  "patients": {
+    "title": "Pacientes",
+    "addPatient": "Agregar Paciente",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "dateOfBirth": "Fecha de Nacimiento"
+  },
+  "settings": {
+    "title": "Configuracion de Practica",
+    "practiceInfo": "Informacion de Practica",
+    "profile": "Tu Perfil"
+  }
+}
