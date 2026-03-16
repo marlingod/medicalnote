@@ -21,6 +21,8 @@ class AuditLog(models.Model):
         RECORDING = "recording", "Recording"
         TEMPLATE = "template", "Template"
         QUALITY_SCORE = "quality_score", "Quality Score"
+        TELEHEALTH = "telehealth", "Telehealth"
+        FHIR_PUSH = "fhir_push", "FHIR Push"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

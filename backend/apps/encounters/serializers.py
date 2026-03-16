@@ -65,6 +65,8 @@ class EncounterDetailSerializer(EncounterSerializer):
     has_transcript = serializers.SerializerMethodField()
     has_note = serializers.SerializerMethodField()
     has_summary = serializers.SerializerMethodField()
+    has_telehealth = serializers.SerializerMethodField()
+    has_quality_score = serializers.SerializerMethodField()
 
     class Meta(EncounterSerializer.Meta):
         fields = EncounterSerializer.Meta.fields + [
@@ -72,6 +74,8 @@ class EncounterDetailSerializer(EncounterSerializer):
             "has_transcript",
             "has_note",
             "has_summary",
+            "has_telehealth",
+            "has_quality_score",
         ]
 
     def get_has_recording(self, obj):
@@ -86,6 +90,12 @@ class EncounterDetailSerializer(EncounterSerializer):
     def get_has_summary(self, obj):
         return hasattr(obj, "patient_summary")
 
+    def get_has_telehealth(self, obj):
+        return hasattr(obj, "telehealth")
+
+    def get_has_quality_score(self, obj):
+        return hasattr(obj, "quality_score")
+
 
 class PasteInputSerializer(serializers.Serializer):
     text = serializers.CharField(min_length=10, max_length=50000)
@@ -93,3 +103,11 @@ class PasteInputSerializer(serializers.Serializer):
 
 class DictationInputSerializer(serializers.Serializer):
     text = serializers.CharField(min_length=10, max_length=50000)
+
+
+class VoiceTranscriptSerializer(serializers.Serializer):
+    text = serializers.CharField(min_length=10, max_length=100000)
+    device_model = serializers.CharField(max_length=100, required=False, default="")
+    whisper_model = serializers.CharField(max_length=50, required=False, default="base")
+    confidence = serializers.FloatField(required=False, default=0.0)
+    language = serializers.CharField(max_length=10, required=False, default="en")

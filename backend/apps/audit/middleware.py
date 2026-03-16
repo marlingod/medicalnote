@@ -20,6 +20,11 @@ PHI_URL_PATTERNS = [
     (re.compile(r"^/api/v1/templates/?$"), "template", None),
     (re.compile(r"^/api/v1/templates/[0-9a-f-]+/auto-complete/?$"), "template", None),
     (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/quality/?"), "quality_score", None),
+    (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/telehealth/?"), "telehealth", None),
+    (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/fhir/push/?"), "fhir_push", None),
+    (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/fhir/logs/?"), "fhir_push", None),
+    (re.compile(r"^/api/v1/fhir/connections/?"), "fhir_push", None),
+    (re.compile(r"^/api/v1/telehealth/"), "telehealth", None),
 ]
 
 METHOD_TO_ACTION = {

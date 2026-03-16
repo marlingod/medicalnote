@@ -153,4 +153,4 @@ class FHIRServiceTest(TestCase):
 
         result = self.service.push_note_to_ehr(self.note, self.encounter)
         assert result["status"] == "failed"
-        assert "Auth failed" in result["error"]
+        assert "Token request failed" in result["error"]
