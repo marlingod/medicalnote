@@ -1,8 +1,8 @@
 import json
 import logging
 
-import anthropic
 from django.conf import settings
+from services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,10 @@ Output strict JSON:
 
 
 class TemplateLLMService:
+    """Template auto-completion service. Uses the multi-provider LLMService under the hood."""
+
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-sonnet-4-20250514"
+        self._llm = LLMService()
 
     def auto_complete_section(
         self,
@@ -99,13 +100,7 @@ Encounter context:
 """
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=2048,
-                system=system,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            raw = response.content[0].text
+            raw = self._llm._call_llm("template_auto_complete", system, user_prompt, max_tokens=2048)
             return self._parse_json(raw)
         except Exception as e:
             logger.error(f"Template auto-complete failed: {e}")

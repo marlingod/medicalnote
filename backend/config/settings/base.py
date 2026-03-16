@@ -216,8 +216,20 @@ AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 AWS_S3_BUCKET = os.environ.get("AWS_S3_BUCKET", "medicalnote-hipaa-dev")
 AWS_KMS_KEY_ID = os.environ.get("AWS_KMS_KEY_ID", "")
 
-# Claude API
+# LLM Provider Configuration
+# Options: "claude" (default), "gemini" (cheapest), "claude+gemini" (best quality/cost)
+#   claude       -> Claude for all tasks
+#   gemini       -> Gemini for all tasks (~60% cheaper)
+#   claude+gemini -> Claude for SOAP/quality/telehealth, Gemini for summaries/terms
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude")
+
+# Claude API (Anthropic)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+
+# Gemini API (Google)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 # Twilio (OTP)
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")

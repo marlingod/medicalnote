@@ -1,10 +1,18 @@
 import json
 import logging
+from enum import Enum
 
-import anthropic
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+class LLMProvider(str, Enum):
+    CLAUDE = "claude"
+    GEMINI = "gemini"
+
+
+# ── Prompts ────────────────────────────────────────────────────────────────────
 
 SOAP_SYSTEM_PROMPT = """You are a medical documentation assistant. Given a clinical transcript or note text, produce a structured SOAP note as JSON.
 
@@ -35,19 +43,109 @@ Output format (strict JSON, no markdown):
 }}"""
 
 
-class LLMService:
-    def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-sonnet-4-20250514"
+# ── Provider Clients ───────────────────────────────────────────────────────────
 
-    def _call_claude(self, system_prompt: str, user_content: str) -> str:
+class ClaudeClient:
+    """Anthropic Claude API client."""
+
+    def __init__(self):
+        import anthropic
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = getattr(settings, "CLAUDE_MODEL", "claude-sonnet-4-20250514")
+
+    def call(self, system_prompt: str, user_content: str, max_tokens: int = 4096) -> str:
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            max_tokens=max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": user_content}],
         )
         return response.content[0].text
+
+
+class GeminiClient:
+    """Google Gemini API client."""
+
+    def __init__(self):
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.model_name = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+
+    def call(self, system_prompt: str, user_content: str, max_tokens: int = 4096) -> str:
+        import google.generativeai as genai
+        model = genai.GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=system_prompt,
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=max_tokens,
+                temperature=0.3,
+            ),
+        )
+        response = model.generate_content(user_content)
+        return response.text
+
+
+# ── LLM Service ────────────────────────────────────────────────────────────────
+
+class LLMService:
+    """
+    Multi-provider LLM service for medical documentation.
+
+    Configuration via Django settings:
+
+        # Option 1: Claude only (default)
+        LLM_PROVIDER = "claude"
+
+        # Option 2: Gemini only (cheapest)
+        LLM_PROVIDER = "gemini"
+
+        # Option 3: Claude + Gemini (best quality/cost ratio)
+        LLM_PROVIDER = "claude+gemini"
+        # Uses Claude for SOAP notes + quality (best structured output)
+        # Uses Gemini for summaries + term explanations (cheapest)
+    """
+
+    def __init__(self, provider: str = None):
+        self.provider_config = provider or getattr(settings, "LLM_PROVIDER", "claude")
+        self._clients = {}
+
+    def _get_client(self, provider: LLMProvider):
+        """Lazy-initialize and cache provider clients."""
+        if provider not in self._clients:
+            if provider == LLMProvider.CLAUDE:
+                self._clients[provider] = ClaudeClient()
+            elif provider == LLMProvider.GEMINI:
+                self._clients[provider] = GeminiClient()
+        return self._clients[provider]
+
+    def _resolve_provider(self, task: str) -> LLMProvider:
+        """
+        Resolve which provider to use for a given task.
+
+        claude       -> Claude for everything
+        gemini       -> Gemini for everything
+        claude+gemini -> Claude for SOAP/quality/telehealth, Gemini for summaries/terms
+        """
+        if self.provider_config == "gemini":
+            return LLMProvider.GEMINI
+        elif self.provider_config == "claude+gemini":
+            # Claude handles structured medical reasoning
+            # Gemini handles text simplification (cheaper)
+            claude_tasks = {"soap_note", "quality_suggestions", "telehealth_soap", "template_auto_complete"}
+            gemini_tasks = {"patient_summary", "medical_terms"}
+            if task in gemini_tasks:
+                return LLMProvider.GEMINI
+            return LLMProvider.CLAUDE
+        else:
+            # Default: claude only
+            return LLMProvider.CLAUDE
+
+    def _call_llm(self, task: str, system_prompt: str, user_content: str, max_tokens: int = 4096) -> str:
+        """Route the call to the appropriate provider."""
+        provider = self._resolve_provider(task)
+        client = self._get_client(provider)
+        logger.info(f"LLM call: task={task}, provider={provider.value}")
+        return client.call(system_prompt, user_content, max_tokens)
 
     def _parse_json(self, text: str) -> dict:
         text = text.strip()
@@ -60,8 +158,10 @@ class LLMService:
             logger.error(f"Failed to parse LLM JSON response: {e}\nResponse: {text[:500]}")
             raise ValueError(f"LLM returned invalid JSON: {e}")
 
+    # ── Public Methods ─────────────────────────────────────────────────────────
+
     def generate_soap_note(self, transcript_text: str, prompt_version: str) -> dict:
-        raw = self._call_claude(SOAP_SYSTEM_PROMPT, transcript_text)
+        raw = self._call_llm("soap_note", SOAP_SYSTEM_PROMPT, transcript_text)
         result = self._parse_json(raw)
         required_keys = {"subjective", "objective", "assessment", "plan"}
         missing = required_keys - set(result.keys())
@@ -80,7 +180,7 @@ class LLMService:
             language="English and Spanish" if language == "en" else language,
         )
         note_text = f"Subjective: {subjective}\nObjective: {objective}\nAssessment: {assessment}\nPlan: {plan}"
-        raw = self._call_claude(system, note_text)
+        raw = self._call_llm("patient_summary", system, note_text)
         result = self._parse_json(raw)
         if "summary_en" not in result:
             raise ValueError("Summary missing 'summary_en' field.")
@@ -100,7 +200,7 @@ class LLMService:
             f"Provider Location: {telehealth_context.get('provider_location', 'Unknown')}\n"
             f"Platform: {telehealth_context.get('platform', 'Unknown')}\n"
         )
-        raw = self._call_claude(TELEHEALTH_SOAP_PROMPT, transcript_text + context_text)
+        raw = self._call_llm("telehealth_soap", TELEHEALTH_SOAP_PROMPT, transcript_text + context_text)
         result = self._parse_json(raw)
 
         required_keys = {"subjective", "objective", "assessment", "plan"}
@@ -131,7 +231,7 @@ class LLMService:
             f"Assessment: {assessment}\nPlan: {plan}\n\n"
             f"QUALITY FINDINGS:\n{findings_text}"
         )
-        raw = self._call_claude(QUALITY_SUGGESTIONS_PROMPT, note_text)
+        raw = self._call_llm("quality_suggestions", QUALITY_SUGGESTIONS_PROMPT, note_text)
         result = self._parse_json(raw)
         result.setdefault("suggestions", [])
         result.setdefault("recommended_em_level", "")
