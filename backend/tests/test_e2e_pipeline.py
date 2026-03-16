@@ -66,7 +66,7 @@ class FullDoctorPatientPipelineTest(TestCase):
 
     @patch("workers.summary.LLMService")
     @patch("workers.soap_note.LLMService")
-    @patch("apps.accounts.adapters.NotificationService")
+    @patch("services.notification_service.NotificationService")
     def test_full_pipeline_paste_flow(
         self, mock_sms_cls, mock_soap_llm_cls, mock_summary_llm_cls
     ):
@@ -608,6 +608,9 @@ class TokenRefreshFlowTest(TestCase):
 
     def test_access_token_refresh_cycle(self):
         """Simulate the refresh flow: login -> use access -> refresh -> use new access."""
+        from unittest.mock import patch as _patch
+        from dj_rest_auth.app_settings import api_settings
+
         practice = Practice.objects.create(name="Refresh Clinic", subscription_tier="solo")
         User.objects.create_user(
             email="refresh_doc@test.com",
@@ -618,44 +621,45 @@ class TokenRefreshFlowTest(TestCase):
             practice=practice,
         )
 
-        client = APIClient()
+        with _patch.object(api_settings, "JWT_AUTH_HTTPONLY", False):
+            client = APIClient()
 
-        # Login
-        login_resp = client.post("/api/v1/auth/login/", {
-            "email": "refresh_doc@test.com",
-            "password": "Ref@shP@ss1!",
-        }, format="json")
-        self.assertEqual(login_resp.status_code, 200)
-        access_1 = login_resp.data["access"]
-        refresh_1 = login_resp.data["refresh"]
+            # Login
+            login_resp = client.post("/api/v1/auth/login/", {
+                "email": "refresh_doc@test.com",
+                "password": "Ref@shP@ss1!",
+            }, format="json")
+            self.assertEqual(login_resp.status_code, 200)
+            access_1 = login_resp.data["access"]
+            refresh_1 = login_resp.data["refresh"]
 
-        # Use access token
-        client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_1}")
-        user_resp = client.get("/api/v1/auth/user/")
-        self.assertEqual(user_resp.status_code, 200)
+            # Use access token
+            client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_1}")
+            user_resp = client.get("/api/v1/auth/user/")
+            self.assertEqual(user_resp.status_code, 200)
 
-        # Refresh the token
-        client.credentials()  # Clear auth
-        refresh_resp = client.post("/api/v1/auth/token/refresh/", {
-            "refresh": refresh_1,
-        }, format="json")
-        self.assertEqual(refresh_resp.status_code, 200)
-        access_2 = refresh_resp.data["access"]
-        refresh_2 = refresh_resp.data["refresh"]
+            # Refresh the token
+            client.credentials()  # Clear auth
+            refresh_resp = client.post("/api/v1/auth/token/refresh/", {
+                "refresh": refresh_1,
+            }, format="json")
+            self.assertEqual(refresh_resp.status_code, 200)
+            access_2 = refresh_resp.data["access"]
+            refresh_2 = refresh_resp.data["refresh"]
 
-        # New tokens are different
-        self.assertNotEqual(access_1, access_2)
+            # New tokens are different
+            self.assertNotEqual(access_1, access_2)
 
-        # Use new access token
-        client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_2}")
-        user_resp2 = client.get("/api/v1/auth/user/")
-        self.assertEqual(user_resp2.status_code, 200)
-        self.assertEqual(user_resp2.data["email"], "refresh_doc@test.com")
+            # Use new access token
+            client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_2}")
+            user_resp2 = client.get("/api/v1/auth/user/")
+            self.assertEqual(user_resp2.status_code, 200)
+            self.assertEqual(user_resp2.data["email"], "refresh_doc@test.com")
 
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
-    CELERY_TASK_EAGER_PROPAGATES=True,
+    CELERY_TASK_EAGER_PROPAGATES=False,
     ACCOUNT_EMAIL_VERIFICATION="none",
 )
 class WorkerFailureHandlingTest(TestCase):

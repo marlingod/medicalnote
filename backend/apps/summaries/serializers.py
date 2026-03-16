@@ -3,6 +3,11 @@ from apps.summaries.models import PatientSummary
 
 
 class PatientSummarySerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    encounter = serializers.CharField(source="encounter.id", read_only=True)
+    clinical_note = serializers.CharField(source="clinical_note.id", read_only=True)
+    prompt_version = serializers.CharField(source="prompt_version.id", read_only=True, default=None)
+
     class Meta:
         model = PatientSummary
         fields = [
@@ -19,6 +24,7 @@ class PatientSummarySerializer(serializers.ModelSerializer):
 
 
 class PatientFacingSummarySerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     doctor_name = serializers.SerializerMethodField()
     encounter_date = serializers.DateField(source="encounter.encounter_date", read_only=True)
 

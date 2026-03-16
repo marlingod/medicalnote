@@ -167,17 +167,22 @@ class AuthContractTests(BaseContractTest):
 
     def test_token_refresh_response_shape(self):
         """POST /api/v1/auth/token/refresh/ -> TokenRefreshResponse."""
-        # Obtain a valid refresh token first
-        client = APIClient()
-        login_resp = client.post("/api/v1/auth/login/", {
-            "email": "contract_doc@test.com",
-            "password": "SecureTestP@ss1",
-        }, format="json")
-        refresh_token = login_resp.data["refresh"]
+        from unittest.mock import patch as _patch
+        # dj-rest-auth caches JWT_AUTH_HTTPONLY at import time, so we need
+        # to patch the live api_settings object to expose the refresh token
+        # in the response body rather than only in an httponly cookie.
+        from dj_rest_auth.app_settings import api_settings
+        with _patch.object(api_settings, "JWT_AUTH_HTTPONLY", False):
+            client = APIClient()
+            login_resp = client.post("/api/v1/auth/login/", {
+                "email": "contract_doc@test.com",
+                "password": "SecureTestP@ss1",
+            }, format="json")
+            refresh_token = login_resp.data["refresh"]
 
-        resp = client.post("/api/v1/auth/token/refresh/", {
-            "refresh": refresh_token,
-        }, format="json")
+            resp = client.post("/api/v1/auth/token/refresh/", {
+                "refresh": refresh_token,
+            }, format="json")
         self.assertEqual(resp.status_code, 200, resp.data)
         _assert_keys(self, resp.data, ["access", "refresh"])
         self.assertIsInstance(resp.data["access"], str)
@@ -225,7 +230,7 @@ class PatientOTPContractTests(BaseContractTest):
       POST /api/v1/auth/patient/otp/verify/  -> OTPVerifyResponse {access, refresh, user_id}
     """
 
-    @patch("apps.accounts.adapters.NotificationService")
+    @patch("services.notification_service.NotificationService")
     def test_otp_send_response_shape(self, mock_sms_cls):
         """OTP send returns {message: str}."""
         mock_sms_cls.return_value = MagicMock()
@@ -237,7 +242,7 @@ class PatientOTPContractTests(BaseContractTest):
         _assert_keys(self, resp.data, ["message"])
         self.assertIsInstance(resp.data["message"], str)
 
-    @patch("apps.accounts.adapters.NotificationService")
+    @patch("services.notification_service.NotificationService")
     def test_otp_verify_response_shape(self, mock_sms_cls):
         """OTP verify returns {access, refresh, user_id}."""
         mock_sms_cls.return_value = MagicMock()
@@ -371,10 +376,11 @@ class EncounterContractTests(BaseContractTest):
     ENCOUNTER_FIELDS = [
         "id", "doctor", "patient", "encounter_date", "input_method",
         "status", "consent_recording", "consent_timestamp", "consent_method",
-        "consent_jurisdiction_state", "created_at", "updated_at",
+        "consent_jurisdiction_state", "template_used", "created_at", "updated_at",
     ]
     ENCOUNTER_DETAIL_EXTRA = [
         "has_recording", "has_transcript", "has_note", "has_summary",
+        "has_telehealth", "has_quality_score",
     ]
     ENCOUNTER_STATUSES = [
         "uploading", "transcribing", "generating_note", "generating_summary",

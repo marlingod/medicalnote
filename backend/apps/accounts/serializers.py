@@ -41,6 +41,8 @@ class DoctorRegistrationSerializer(RegisterSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    practice = serializers.CharField(source="practice.id", read_only=True, default=None)
     practice_name = serializers.CharField(source="practice.name", read_only=True, default=None)
 
     class Meta:
@@ -62,6 +64,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
 
 class PracticeSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+
     class Meta:
         model = Practice
         fields = [

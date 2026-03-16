@@ -4,6 +4,8 @@ from apps.notes.models import ClinicalNote, PromptVersion
 
 
 class PromptVersionSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+
     class Meta:
         model = PromptVersion
         fields = ["id", "prompt_name", "version", "is_active", "created_at"]
@@ -11,7 +13,17 @@ class PromptVersionSerializer(serializers.ModelSerializer):
 
 
 class ClinicalNoteSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    encounter = serializers.CharField(source="encounter.id", read_only=True)
+    approved_by = serializers.SerializerMethodField()
+    prompt_version = serializers.SerializerMethodField()
     prompt_version_detail = PromptVersionSerializer(source="prompt_version", read_only=True)
+
+    def get_approved_by(self, obj):
+        return str(obj.approved_by.id) if obj.approved_by else None
+
+    def get_prompt_version(self, obj):
+        return str(obj.prompt_version.id) if obj.prompt_version else None
 
     class Meta:
         model = ClinicalNote

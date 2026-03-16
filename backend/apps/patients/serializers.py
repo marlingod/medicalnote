@@ -4,6 +4,8 @@ from apps.patients.models import Patient
 
 
 class PatientSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+
     class Meta:
         model = Patient
         fields = [
@@ -27,6 +29,7 @@ class PatientSerializer(serializers.ModelSerializer):
 
 class PatientListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list view (no full PHI)."""
+    id = serializers.CharField(read_only=True)
 
     class Meta:
         model = Patient

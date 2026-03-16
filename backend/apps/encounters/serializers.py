@@ -4,6 +4,8 @@ from apps.encounters.models import Encounter, Recording, Transcript
 
 
 class TranscriptSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+
     class Meta:
         model = Transcript
         fields = [
@@ -34,6 +36,12 @@ class RecordingSerializer(serializers.ModelSerializer):
 
 
 class EncounterSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    doctor = serializers.CharField(source="doctor.id", read_only=True)
+    patient = serializers.PrimaryKeyRelatedField(
+        queryset=Encounter._meta.get_field("patient").related_model.objects.all(),
+    )
+
     class Meta:
         model = Encounter
         fields = [
@@ -52,6 +60,15 @@ class EncounterSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "doctor", "status", "created_at", "updated_at"]
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Ensure patient and template_used are serialized as strings
+        if ret.get("patient") is not None:
+            ret["patient"] = str(ret["patient"])
+        if ret.get("template_used") is not None:
+            ret["template_used"] = str(ret["template_used"])
+        return ret
 
     def create(self, validated_data):
         validated_data["doctor"] = self.context["request"].user

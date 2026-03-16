@@ -259,7 +259,7 @@ ENCOUNTER_SCHEMA = {
     "required": [
         "id", "doctor", "patient", "encounter_date", "input_method",
         "status", "consent_recording", "consent_timestamp", "consent_method",
-        "consent_jurisdiction_state", "created_at", "updated_at",
+        "consent_jurisdiction_state", "template_used", "created_at", "updated_at",
     ],
     "properties": {
         "id": {"type": "string"},
@@ -268,7 +268,7 @@ ENCOUNTER_SCHEMA = {
         "encounter_date": {"type": "string"},
         "input_method": {
             "type": "string",
-            "enum": ["recording", "paste", "dictation", "scan"],
+            "enum": ["recording", "paste", "dictation", "scan", "telehealth"],
         },
         "status": {
             "type": "string",
@@ -283,6 +283,7 @@ ENCOUNTER_SCHEMA = {
         "consent_timestamp": {"type": ["string", "null"]},
         "consent_method": {"type": "string"},
         "consent_jurisdiction_state": {"type": "string"},
+        "template_used": {"type": ["string", "null"]},
         "created_at": {"type": "string"},
         "updated_at": {"type": "string"},
         # Detail-only fields (present only in retrieve)
@@ -290,6 +291,8 @@ ENCOUNTER_SCHEMA = {
         "has_transcript": {"type": "boolean"},
         "has_note": {"type": "boolean"},
         "has_summary": {"type": "boolean"},
+        "has_telehealth": {"type": "boolean"},
+        "has_quality_score": {"type": "boolean"},
     },
     "additionalProperties": False,
 }
@@ -298,6 +301,7 @@ ENCOUNTER_DETAIL_SCHEMA = {
     **ENCOUNTER_SCHEMA,
     "required": ENCOUNTER_SCHEMA["required"] + [
         "has_recording", "has_transcript", "has_note", "has_summary",
+        "has_telehealth", "has_quality_score",
     ],
 }
 
@@ -600,11 +604,14 @@ class BaseSchemaTest(TestCase):
 class UserSchemaTests(BaseSchemaTest):
 
     def test_login_response_matches_schema(self):
-        client = APIClient()
-        resp = client.post("/api/v1/auth/login/", {
-            "email": "schema_doc@test.com",
-            "password": "Str0ngP@ssw0rd!",
-        }, format="json")
+        from unittest.mock import patch as _patch
+        from dj_rest_auth.app_settings import api_settings
+        with _patch.object(api_settings, "JWT_AUTH_HTTPONLY", False):
+            client = APIClient()
+            resp = client.post("/api/v1/auth/login/", {
+                "email": "schema_doc@test.com",
+                "password": "Str0ngP@ssw0rd!",
+            }, format="json")
         self.assertEqual(resp.status_code, 200)
         validate_schema(self, resp.data, LOGIN_RESPONSE_SCHEMA, "LoginResponse")
 
@@ -614,34 +621,40 @@ class UserSchemaTests(BaseSchemaTest):
         validate_schema(self, resp.data, USER_SCHEMA, "User")
 
     def test_token_refresh_matches_schema(self):
-        client = APIClient()
-        login = client.post("/api/v1/auth/login/", {
-            "email": "schema_doc@test.com",
-            "password": "Str0ngP@ssw0rd!",
-        }, format="json")
-        resp = client.post("/api/v1/auth/token/refresh/", {
-            "refresh": login.data["refresh"],
-        }, format="json")
+        from unittest.mock import patch as _patch
+        from dj_rest_auth.app_settings import api_settings
+        with _patch.object(api_settings, "JWT_AUTH_HTTPONLY", False):
+            client = APIClient()
+            login = client.post("/api/v1/auth/login/", {
+                "email": "schema_doc@test.com",
+                "password": "Str0ngP@ssw0rd!",
+            }, format="json")
+            resp = client.post("/api/v1/auth/token/refresh/", {
+                "refresh": login.data["refresh"],
+            }, format="json")
         self.assertEqual(resp.status_code, 200)
         validate_schema(self, resp.data, TOKEN_REFRESH_SCHEMA, "TokenRefreshResponse")
 
     def test_register_response_matches_schema(self):
-        client = APIClient()
-        resp = client.post("/api/v1/auth/registration/", {
-            "email": "schemareg@test.com",
-            "password1": "Str0ngP@ssw0rd!",
-            "password2": "Str0ngP@ssw0rd!",
-            "first_name": "Reg",
-            "last_name": "User",
-            "practice_name": "Reg Practice",
-        }, format="json")
+        from unittest.mock import patch as _patch
+        from dj_rest_auth.app_settings import api_settings
+        with _patch.object(api_settings, "JWT_AUTH_HTTPONLY", False):
+            client = APIClient()
+            resp = client.post("/api/v1/auth/registration/", {
+                "email": "schemareg@test.com",
+                "password1": "Str0ngP@ssw0rd!",
+                "password2": "Str0ngP@ssw0rd!",
+                "first_name": "Reg",
+                "last_name": "User",
+                "practice_name": "Reg Practice",
+            }, format="json")
         self.assertEqual(resp.status_code, 201, resp.data)
         validate_schema(self, resp.data, LOGIN_RESPONSE_SCHEMA, "Registration/LoginResponse")
 
 
 class OTPSchemaTests(BaseSchemaTest):
 
-    @patch("apps.accounts.adapters.NotificationService")
+    @patch("services.notification_service.NotificationService")
     def test_otp_send_matches_schema(self, mock_sms_cls):
         mock_sms_cls.return_value = MagicMock()
         client = APIClient()
