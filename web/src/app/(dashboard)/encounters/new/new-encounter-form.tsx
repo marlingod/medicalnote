@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -244,19 +244,163 @@ function DictationInput({
   isSubmitting?: boolean;
 }) {
   const [text, setText] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState("");
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const supportsVoice =
+    typeof window !== "undefined" &&
+    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+
+  const startListening = () => {
+    if (!supportsVoice) return;
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcript + " ";
+        } else {
+          interim += transcript;
+        }
+      }
+      if (final) {
+        setText((prev) => prev + final);
+      }
+      setInterimText(interim);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setInterimText("");
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setInterimText("");
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  const clearText = () => {
+    setText("");
+    setInterimText("");
+  };
+
   return (
     <div className="space-y-4">
       <Label htmlFor="dictation">Dictate Clinical Notes</Label>
-      <Textarea
-        id="dictation"
-        placeholder="Dictate or type your clinical notes..."
-        className="min-h-[200px]"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
+
+      {!supportsVoice && (
+        <Alert>
+          <AlertDescription>
+            Voice dictation is not supported in this browser. You can type your notes below instead.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex gap-2">
+        {supportsVoice && (
+          <Button
+            type="button"
+            variant={isListening ? "destructive" : "default"}
+            onClick={toggleListening}
+            disabled={isSubmitting}
+            className="flex items-center gap-2"
+          >
+            {isListening ? (
+              <>
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                </span>
+                Stop Listening
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                Start Dictating
+              </>
+            )}
+          </Button>
+        )}
+        {text.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={clearText}
+            disabled={isSubmitting || isListening}
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <div className="relative">
+        <Textarea
+          id="dictation"
+          placeholder={isListening ? "Listening... speak now" : "Click 'Start Dictating' to use voice, or type your clinical notes here..."}
+          className={`min-h-[200px] ${isListening ? "border-red-500 border-2" : ""}`}
+          value={text + (interimText ? interimText : "")}
+          onChange={(e) => {
+            if (!isListening) {
+              setText(e.target.value);
+            }
+          }}
+          readOnly={isListening}
+        />
+        {isListening && (
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-red-500">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+            Recording...
+          </div>
+        )}
+      </div>
+
+      {interimText && (
+        <p className="text-sm text-muted-foreground italic">
+          Hearing: "{interimText}"
+        </p>
+      )}
+
       <Button
-        onClick={() => onSubmit(text)}
-        disabled={isSubmitting || text.length < 10}
+        onClick={() => {
+          stopListening();
+          onSubmit(text);
+        }}
+        disabled={isSubmitting || text.length < 10 || isListening}
         className="w-full"
       >
         {isSubmitting ? "Submitting..." : "Submit Dictation"}
