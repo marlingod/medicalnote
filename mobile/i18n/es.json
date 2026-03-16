@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "MedicalNote",
+    "loading": "Cargando...",
+    "error": "Ocurrio un error",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "ok": "Aceptar",
+    "offline": "Estas sin conexion. Mostrando datos guardados."
+  },
+  "auth": {
+    "welcome": "Bienvenido a MedicalNote",
+    "enterPhone": "Ingrese su numero de telefono",
+    "phoneLabel": "Numero de Telefono",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "sendCode": "Enviar Codigo de Verificacion",
+    "enterOTP": "Ingrese el codigo de verificacion",
+    "otpLabel": "Codigo de 6 Digitos",
+    "otpPlaceholder": "000000",
+    "verifyCode": "Verificar Codigo",
+    "codeSent": "Codigo de verificacion enviado!",
+    "invalidCode": "Codigo de verificacion invalido. Intente de nuevo.",
+    "tooManyAttempts": "Demasiados intentos. Intente mas tarde.",
+    "resendCode": "Reenviar Codigo",
+    "resendIn": "Reenviar codigo en {{seconds}}s"
+  },
+  "profileSetup": {
+    "title": "Configura Tu Perfil",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "language": "Idioma Preferido",
+    "continue": "Continuar"
+  },
+  "summary": {
+    "listTitle": "Mis Resumenes de Visita",
+    "visitDate": "Fecha de Visita",
+    "doctorName": "Doctor",
+    "disclaimer": "Este resumen es solo para fines informativos y no reemplaza el consejo medico profesional. Contacte a su doctor con cualquier pregunta.",
+    "contactDoctor": "Contactar a Mi Doctor",
+    "noSummaries": "Aun no hay resumenes de visita. Su doctor los compartira con usted despues de sus citas.",
+    "tapToExplain": "Toque los terminos resaltados para ver explicaciones",
+    "readingLevel": "Nivel de Lectura",
+    "viewedAt": "Visto el",
+    "new": "Nuevo",
+    "languageToggle": "Ver en {{language}}",
+    "english": "Ingles",
+    "spanish": "Espanol"
+  },
+  "profile": {
+    "title": "Perfil y Configuracion",
+    "language": "Idioma",
+    "notifications": "Notificaciones",
+    "notificationsEnabled": "Las notificaciones push estan habilitadas",
+    "notificationsDisabled": "Las notificaciones push estan deshabilitadas",
+    "privacy": "Privacidad",
+    "logout": "Cerrar Sesion",
+    "logoutConfirm": "Esta seguro que desea cerrar sesion?",
+    "version": "Version"
+  },
+  "notification": {
+    "newSummary": "Nuevo Resumen de Visita",
+    "summaryBody": "{{doctorName}} compartio su resumen de visita del {{date}}"
+  }
+}

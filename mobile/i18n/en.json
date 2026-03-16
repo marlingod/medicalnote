@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "MedicalNote",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "ok": "OK",
+    "offline": "You are offline. Showing cached data."
+  },
+  "auth": {
+    "welcome": "Welcome to MedicalNote",
+    "enterPhone": "Enter your phone number",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "sendCode": "Send Verification Code",
+    "enterOTP": "Enter verification code",
+    "otpLabel": "6-Digit Code",
+    "otpPlaceholder": "000000",
+    "verifyCode": "Verify Code",
+    "codeSent": "Verification code sent!",
+    "invalidCode": "Invalid verification code. Please try again.",
+    "tooManyAttempts": "Too many attempts. Please try again later.",
+    "resendCode": "Resend Code",
+    "resendIn": "Resend code in {{seconds}}s"
+  },
+  "profileSetup": {
+    "title": "Set Up Your Profile",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "language": "Preferred Language",
+    "continue": "Continue"
+  },
+  "summary": {
+    "listTitle": "My Visit Summaries",
+    "visitDate": "Visit Date",
+    "doctorName": "Doctor",
+    "disclaimer": "This summary is for informational purposes only and does not replace professional medical advice. Contact your doctor with any questions.",
+    "contactDoctor": "Contact My Doctor",
+    "noSummaries": "No visit summaries yet. Your doctor will share them with you after your appointments.",
+    "tapToExplain": "Tap highlighted terms for explanations",
+    "readingLevel": "Reading Level",
+    "viewedAt": "Viewed on",
+    "new": "New",
+    "languageToggle": "View in {{language}}",
+    "english": "English",
+    "spanish": "Spanish"
+  },
+  "profile": {
+    "title": "Profile & Settings",
+    "language": "Language",
+    "notifications": "Notifications",
+    "notificationsEnabled": "Push notifications are enabled",
+    "notificationsDisabled": "Push notifications are disabled",
+    "privacy": "Privacy",
+    "logout": "Log Out",
+    "logoutConfirm": "Are you sure you want to log out?",
+    "version": "Version"
+  },
+  "notification": {
+    "newSummary": "New Visit Summary",
+    "summaryBody": "{{doctorName}} shared your visit summary from {{date}}"
+  }
+}
