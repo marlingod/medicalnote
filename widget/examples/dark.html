@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalNote Widget - Dark Mode Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background-color: #1a1a2e;
+      color: #e0e0e0;
+    }
+    h1 { margin-bottom: 8px; }
+    p { color: #999; margin-bottom: 24px; }
+    .widget-container {
+      border: 1px solid #374151;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <h1>MedicalNote Widget - Dark Mode</h1>
+  <p>Testing the dark theme variant.</p>
+
+  <div class="widget-container">
+    <div id="medicalnote-widget"></div>
+  </div>
+
+  <script src="../dist/widget.js"
+    data-widget-key="wk_test123"
+    data-theme="dark"
+    data-lang="es"
+    data-api-url="http://localhost:8000">
+  </script>
+</body>
+</html>

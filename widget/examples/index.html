@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalNote Widget - Test Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    h1 { margin-bottom: 8px; }
+    p { color: #666; margin-bottom: 24px; }
+    .widget-container {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <h1>MedicalNote Widget - Integration Test</h1>
+  <p>This page simulates a clinic's website embedding the MedicalNote widget.</p>
+
+  <div class="widget-container">
+    <div id="medicalnote-widget"></div>
+  </div>
+
+  <!-- Use local build for testing -->
+  <script src="../dist/widget.js"
+    data-widget-key="wk_test123"
+    data-theme="light"
+    data-lang="en"
+    data-api-url="http://localhost:8000">
+  </script>
+</body>
+</html>

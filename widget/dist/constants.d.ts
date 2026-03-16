@@ -1,0 +1,10 @@
+export declare const WIDGET_VERSION = "v1";
+export declare const DEFAULT_API_BASE_URL = "https://api.medicalnote.app";
+export declare const WIDGET_ORIGIN = "https://widget.medicalnote.app";
+export declare const IFRAME_ID = "medicalnote-widget-iframe";
+export declare const MESSAGE_NAMESPACE = "medicalnote-widget";
+export declare const TOKEN_MAX_AGE_MS: number;
+export declare const DEFAULT_CONTAINER_ID = "medicalnote-widget";
+export declare const SCRIPT_TAG_SELECTOR = "script[src*=\"widget.js\"]";
+export declare const MAX_IFRAME_HEIGHT = 2000;
+export declare const MIN_IFRAME_HEIGHT = 200;
