@@ -58,6 +58,10 @@ def generate_soap_note_task(self, encounter_id: str):
         from workers.summary import generate_summary_task
         generate_summary_task.delay(encounter_id)
 
+        # Auto-trigger quality scoring
+        from workers.quality_checker import quality_checker_task
+        quality_checker_task.delay(encounter_id)
+
         _send_ws_update(encounter_id, "generating_summary")
 
     except ValueError as exc:

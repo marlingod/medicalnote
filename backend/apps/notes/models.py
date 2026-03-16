@@ -32,6 +32,7 @@ class ClinicalNote(models.Model):
         SOAP = "soap", "SOAP"
         FREE_TEXT = "free_text", "Free Text"
         H_AND_P = "h_and_p", "History & Physical"
+        TELEHEALTH_SOAP = "telehealth_soap", "Telehealth SOAP"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     encounter = models.OneToOneField(

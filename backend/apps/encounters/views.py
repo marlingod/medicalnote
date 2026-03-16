@@ -167,3 +167,40 @@ class EncounterViewSet(viewsets.ModelViewSet):
             )
         serializer = TranscriptSerializer(transcript)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="voice-transcript")
+    def voice_transcript(self, request, pk=None):
+        """Accept pre-transcribed text from on-device Whisper (mobile offline mode)."""
+        encounter = self.get_object()
+        text = request.data.get("text", "").strip()
+        confidence = request.data.get("confidence", 0.0)
+        language = request.data.get("language", "en")
+
+        if len(text) < 10:
+            return Response(
+                {"error": "Transcript text must be at least 10 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        Transcript.objects.update_or_create(
+            encounter=encounter,
+            defaults={
+                "raw_text": text,
+                "speaker_segments": [],
+                "medical_terms_detected": [],
+                "confidence_score": float(confidence),
+                "language_detected": language,
+            },
+        )
+
+        encounter.status = Encounter.Status.GENERATING_NOTE
+        encounter.save(update_fields=["status", "updated_at"])
+
+        from workers.soap_note import generate_soap_note_task
+
+        generate_soap_note_task.delay(str(encounter.id))
+
+        return Response(
+            {"status": "processing", "encounter_id": str(encounter.id)},
+            status=status.HTTP_202_ACCEPTED,
+        )

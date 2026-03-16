@@ -38,6 +38,10 @@ INSTALLED_APPS = [
     "apps.widget",
     "apps.audit",
     "apps.realtime",
+    "apps.templates",
+    "apps.quality",
+    "apps.telehealth",
+    "apps.fhir",
 ]
 
 MIDDLEWARE = [
@@ -253,3 +257,7 @@ LOGGING = {
         "workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }
+
+# FHIR Integration
+FHIR_DEFAULT_TIMEOUT = 30  # seconds
+FHIR_MAX_RETRIES = 3

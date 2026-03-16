@@ -16,6 +16,10 @@ PHI_URL_PATTERNS = [
     (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/transcript/?$"), "recording", "view"),
     (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/recording/?$"), "recording", None),
     (re.compile(r"^/api/v1/patient/summaries/?"), "summary", None),
+    (re.compile(r"^/api/v1/templates/(?P<id>[0-9a-f-]+)/?$"), "template", "view"),
+    (re.compile(r"^/api/v1/templates/?$"), "template", None),
+    (re.compile(r"^/api/v1/templates/[0-9a-f-]+/auto-complete/?$"), "template", None),
+    (re.compile(r"^/api/v1/encounters/[0-9a-f-]+/quality/?"), "quality_score", None),
 ]
 
 METHOD_TO_ACTION = {

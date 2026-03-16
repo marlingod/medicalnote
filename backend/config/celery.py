@@ -12,6 +12,7 @@ app.conf.task_routes = {
     "workers.soap_note.*": {"queue": "soap_note"},
     "workers.summary.*": {"queue": "summary"},
     "workers.ocr.*": {"queue": "ocr"},
+    "workers.quality_checker.*": {"queue": "quality"},
 }
 
 app.conf.task_default_queue = "default"

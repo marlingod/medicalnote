@@ -11,4 +11,8 @@ urlpatterns = [
     path("api/v1/widget/", include("apps.widget.urls")),
     path("api/v1/practice/", include("apps.accounts.practice_urls")),
     path("api/v1/patient/", include("apps.summaries.patient_urls")),
+    path("api/v1/templates/", include("apps.templates.urls")),
+    path("api/v1/encounters/", include("apps.quality.urls")),
+    path("api/v1/telehealth/", include("apps.telehealth.urls")),
+    path("api/v1/fhir/", include("apps.fhir.urls")),
 ]

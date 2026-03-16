@@ -47,6 +47,7 @@ class EncounterSerializer(serializers.ModelSerializer):
             "consent_timestamp",
             "consent_method",
             "consent_jurisdiction_state",
+            "template_used",
             "created_at",
             "updated_at",
         ]

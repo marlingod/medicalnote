@@ -10,6 +10,7 @@ class Encounter(models.Model):
         PASTE = "paste", "Paste"
         DICTATION = "dictation", "Dictation"
         SCAN = "scan", "Scan"
+        TELEHEALTH = "telehealth", "Telehealth"
 
     class Status(models.TextChoices):
         UPLOADING = "uploading", "Uploading"
@@ -22,6 +23,7 @@ class Encounter(models.Model):
         TRANSCRIPTION_FAILED = "transcription_failed", "Transcription Failed"
         NOTE_GENERATION_FAILED = "note_generation_failed", "Note Generation Failed"
         SUMMARY_GENERATION_FAILED = "summary_generation_failed", "Summary Generation Failed"
+        QUALITY_CHECKING = "quality_checking", "Quality Checking"
 
     class ConsentMethod(models.TextChoices):
         VERBAL = "verbal", "Verbal"
@@ -56,6 +58,13 @@ class Encounter(models.Model):
         default="",
     )
     consent_jurisdiction_state = models.CharField(max_length=2, blank=True, default="")
+    template_used = models.ForeignKey(
+        "note_templates.NoteTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="encounters",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

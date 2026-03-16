@@ -20,3 +20,6 @@ SECURE_SSL_REDIRECT = False
 
 # CORS: allow all in development
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Skip email verification in development
+ACCOUNT_EMAIL_VERIFICATION = "none"
