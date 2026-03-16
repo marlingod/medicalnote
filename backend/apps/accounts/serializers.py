@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
 
-from apps.accounts.models import Practice, User
+from apps.accounts.models import DeviceToken, Practice, User
 
 
 class DoctorRegistrationSerializer(RegisterSerializer):
@@ -75,3 +75,28 @@ class PracticeSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ["id", "token", "platform", "is_active", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_active", "created_at", "updated_at"]
+
+    def validate_platform(self, value):
+        if value not in ("ios", "android"):
+            raise serializers.ValidationError("Platform must be 'ios' or 'android'.")
+        return value
+
+
+class PatientProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "phone",
+            "language_preference",
+            "email",
+        ]
+        read_only_fields = ["phone", "email"]
