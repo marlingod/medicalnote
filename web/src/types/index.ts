@@ -49,6 +49,7 @@ export interface TokenRefreshResponse {
 // ============ Practice Types ============
 
 export type SubscriptionTier = "solo" | "group" | "enterprise";
+export type LLMProvider = "claude" | "gemini" | "claude+gemini";
 
 export interface Practice {
   id: string;
@@ -57,6 +58,7 @@ export interface Practice {
   phone: string;
   subscription_tier: SubscriptionTier;
   white_label_config: Record<string, unknown> | null;
+  llm_provider: LLMProvider;
   created_at: string;
   updated_at: string;
 }

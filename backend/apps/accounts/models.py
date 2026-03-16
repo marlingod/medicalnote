@@ -46,6 +46,19 @@ class Practice(models.Model):
         default=SubscriptionTier.SOLO,
     )
     white_label_config = models.JSONField(null=True, blank=True)
+
+    class LLMProviderChoice(models.TextChoices):
+        CLAUDE = "claude", "Claude Only"
+        GEMINI = "gemini", "Gemini Only (Most Affordable)"
+        CLAUDE_GEMINI = "claude+gemini", "Claude + Gemini (Best Value)"
+
+    llm_provider = models.CharField(
+        max_length=20,
+        choices=LLMProviderChoice.choices,
+        default=LLMProviderChoice.CLAUDE,
+        help_text="AI model provider for note generation and summaries",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

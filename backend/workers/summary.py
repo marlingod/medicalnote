@@ -37,7 +37,8 @@ def generate_summary_task(self, encounter_id: str):
         reading_level = "grade_8"
         language = patient.language_preference if patient else "en"
 
-        llm = LLMService()
+        practice = encounter.doctor.practice if encounter.doctor else None
+        llm = LLMService(practice=practice)
         result = llm.generate_patient_summary(
             subjective=note.subjective,
             objective=note.objective,

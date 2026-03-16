@@ -105,8 +105,17 @@ class LLMService:
         # Uses Gemini for summaries + term explanations (cheapest)
     """
 
-    def __init__(self, provider: str = None):
-        self.provider_config = provider or getattr(settings, "LLM_PROVIDER", "claude")
+    def __init__(self, provider: str = None, practice=None):
+        """
+        Initialize with explicit provider, practice-level setting, or global default.
+        Priority: explicit provider > practice.llm_provider > settings.LLM_PROVIDER > "claude"
+        """
+        if provider:
+            self.provider_config = provider
+        elif practice and hasattr(practice, "llm_provider") and practice.llm_provider:
+            self.provider_config = practice.llm_provider
+        else:
+            self.provider_config = getattr(settings, "LLM_PROVIDER", "claude")
         self._clients = {}
 
     def _get_client(self, provider: LLMProvider):

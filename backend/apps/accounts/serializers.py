@@ -75,6 +75,7 @@ class PracticeSerializer(serializers.ModelSerializer):
             "phone",
             "subscription_tier",
             "white_label_config",
+            "llm_provider",
             "created_at",
             "updated_at",
         ]

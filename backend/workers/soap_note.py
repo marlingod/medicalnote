@@ -33,7 +33,8 @@ def generate_soap_note_task(self, encounter_id: str):
         ).first()
         version_str = prompt_version.version if prompt_version else "1.0.0"
 
-        llm = LLMService()
+        practice = encounter.doctor.practice if encounter.doctor else None
+        llm = LLMService(practice=practice)
         result = llm.generate_soap_note(transcript.raw_text, version_str)
 
         with transaction.atomic():
