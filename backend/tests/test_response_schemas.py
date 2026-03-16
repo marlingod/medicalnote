@@ -9,12 +9,13 @@ Schemas are derived from the TypeScript interfaces in:
   - web/src/types/index.ts
   - mobile/types/api.ts
   - widget/src/types.ts
+
+Uses a lightweight built-in schema validator (no external jsonschema dependency).
 """
 
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-import jsonschema
 from django.core.cache import cache
 from django.core.signing import TimestampSigner
 from django.test import TestCase, override_settings
@@ -25,6 +26,131 @@ from apps.encounters.models import Encounter, Transcript
 from apps.notes.models import ClinicalNote, PromptVersion
 from apps.patients.models import Patient
 from apps.summaries.models import PatientSummary
+
+
+# ---------------------------------------------------------------------------
+# Lightweight schema validator (no external dependency)
+# ---------------------------------------------------------------------------
+
+_PYTHON_TYPE_MAP = {
+    "string": str,
+    "integer": int,
+    "number": (int, float),
+    "boolean": bool,
+    "array": list,
+    "object": dict,
+}
+
+
+def _check_type(value, type_spec):
+    """Return True if *value* matches *type_spec* (a string or list of strings)."""
+    if isinstance(type_spec, list):
+        # e.g. ["string", "null"]
+        for t in type_spec:
+            if t == "null" and value is None:
+                return True
+            if t in _PYTHON_TYPE_MAP and isinstance(value, _PYTHON_TYPE_MAP[t]):
+                return True
+        return False
+    if type_spec == "null":
+        return value is None
+    return isinstance(value, _PYTHON_TYPE_MAP.get(type_spec, type(None)))
+
+
+def validate_schema(test_case, data, schema, msg="", path=""):
+    """
+    Validate *data* against a JSON-Schema-like dict.
+
+    Supports: type, required, properties, additionalProperties, enum,
+    items, oneOf, minLength.  Enough for the schemas defined in this file.
+    """
+    prefix = f"[{msg}] " if msg else ""
+
+    # --- type check ---
+    schema_type = schema.get("type")
+    if schema_type:
+        if not _check_type(data, schema_type):
+            test_case.fail(
+                f"{prefix}Type mismatch at '{path}': "
+                f"expected {schema_type}, got {type(data).__name__} (value={data!r})"
+            )
+
+    # --- oneOf ---
+    if "oneOf" in schema:
+        matched = False
+        for sub_schema in schema["oneOf"]:
+            try:
+                validate_schema(test_case, data, sub_schema, msg=msg, path=path)
+                matched = True
+                break
+            except (AssertionError, Exception):
+                continue
+        if not matched:
+            test_case.fail(
+                f"{prefix}No oneOf branch matched at '{path}': value={data!r}"
+            )
+        return  # oneOf matched; skip remaining checks for this node
+
+    # --- null passthrough ---
+    if data is None:
+        if schema_type and "null" not in (schema_type if isinstance(schema_type, list) else [schema_type]):
+            test_case.fail(f"{prefix}Unexpected null at '{path}'")
+        return
+
+    # --- enum ---
+    if "enum" in schema:
+        test_case.assertIn(
+            data, schema["enum"],
+            f"{prefix}Enum violation at '{path}': {data!r} not in {schema['enum']}"
+        )
+
+    # --- minLength ---
+    if "minLength" in schema and isinstance(data, str):
+        test_case.assertGreaterEqual(
+            len(data), schema["minLength"],
+            f"{prefix}String too short at '{path}'"
+        )
+
+    # --- required ---
+    if "required" in schema and isinstance(data, dict):
+        for key in schema["required"]:
+            test_case.assertIn(
+                key, data,
+                f"{prefix}Missing required key '{key}' at '{path}'"
+            )
+
+    # --- properties ---
+    if "properties" in schema and isinstance(data, dict):
+        for key, prop_schema in schema["properties"].items():
+            if key in data:
+                validate_schema(
+                    test_case, data[key], prop_schema,
+                    msg=msg, path=f"{path}.{key}" if path else key,
+                )
+
+    # --- additionalProperties ---
+    additional = schema.get("additionalProperties")
+    if additional is False and "properties" in schema and isinstance(data, dict):
+        extra = set(data.keys()) - set(schema["properties"].keys())
+        if extra:
+            test_case.fail(
+                f"{prefix}Unexpected keys at '{path}': {extra}"
+            )
+    elif isinstance(additional, dict) and isinstance(data, dict):
+        for key, value in data.items():
+            if key not in schema.get("properties", {}):
+                validate_schema(
+                    test_case, value, additional,
+                    msg=msg, path=f"{path}.{key}" if path else key,
+                )
+
+    # --- items (array) ---
+    if "items" in schema and isinstance(data, list):
+        for idx, item in enumerate(data):
+            validate_schema(
+                test_case, item, schema["items"],
+                msg=msg, path=f"{path}[{idx}]" if path else f"[{idx}]",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -39,8 +165,8 @@ USER_SCHEMA = {
         "language_preference", "created_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
-        "email": {"type": "string", "format": "email"},
+        "id": {"type": "string"},
+        "email": {"type": "string"},
         "first_name": {"type": "string"},
         "last_name": {"type": "string"},
         "role": {"type": "string", "enum": ["doctor", "admin", "patient"]},
@@ -102,7 +228,7 @@ PATIENT_SCHEMA = {
         "language_preference", "created_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "first_name": {"type": "string"},
         "last_name": {"type": "string"},
         "email": {"type": "string"},
@@ -119,7 +245,7 @@ PATIENT_LIST_ITEM_SCHEMA = {
     "type": "object",
     "required": ["id", "first_name", "last_name", "language_preference", "created_at"],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "first_name": {"type": "string"},
         "last_name": {"type": "string"},
         "language_preference": {"type": "string"},
@@ -136,7 +262,7 @@ ENCOUNTER_SCHEMA = {
         "consent_jurisdiction_state", "created_at", "updated_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "doctor": {"type": "string"},
         "patient": {"type": "string"},
         "encounter_date": {"type": "string"},
@@ -159,7 +285,7 @@ ENCOUNTER_SCHEMA = {
         "consent_jurisdiction_state": {"type": "string"},
         "created_at": {"type": "string"},
         "updated_at": {"type": "string"},
-        # Detail-only fields
+        # Detail-only fields (present only in retrieve)
         "has_recording": {"type": "boolean"},
         "has_transcript": {"type": "boolean"},
         "has_note": {"type": "boolean"},
@@ -182,7 +308,7 @@ TRANSCRIPT_SCHEMA = {
         "confidence_score", "language_detected", "created_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "raw_text": {"type": "string"},
         "speaker_segments": {
             "type": "array",
@@ -212,7 +338,7 @@ PROMPT_VERSION_SCHEMA = {
     "type": "object",
     "required": ["id", "prompt_name", "version", "is_active", "created_at"],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "prompt_name": {"type": "string"},
         "version": {"type": "string"},
         "is_active": {"type": "boolean"},
@@ -230,7 +356,7 @@ CLINICAL_NOTE_SCHEMA = {
         "prompt_version", "prompt_version_detail", "created_at", "updated_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "encounter": {"type": "string"},
         "note_type": {"type": "string", "enum": ["soap", "free_text", "h_and_p"]},
         "subjective": {"type": "string"},
@@ -266,7 +392,7 @@ DOCTOR_SUMMARY_SCHEMA = {
         "prompt_version", "created_at", "updated_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "encounter": {"type": "string"},
         "clinical_note": {"type": "string"},
         "summary_en": {"type": "string"},
@@ -308,7 +434,7 @@ PATIENT_FACING_SUMMARY_SCHEMA = {
         "viewed_at", "created_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "summary_en": {"type": "string"},
         "summary_es": {"type": "string"},
         "reading_level": {"type": "string", "enum": ["grade_5", "grade_8", "grade_12"]},
@@ -379,7 +505,7 @@ PRACTICE_SCHEMA = {
         "white_label_config", "created_at", "updated_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "name": {"type": "string"},
         "address": {"type": "string"},
         "phone": {"type": "string"},
@@ -415,7 +541,7 @@ AUDIT_LOG_ENTRY_SCHEMA = {
         "resource_id", "ip_address", "phi_accessed", "created_at",
     ],
     "properties": {
-        "id": {"type": "string", "format": "uuid"},
+        "id": {"type": "string"},
         "user_email": {"type": "string"},
         "action": {"type": "string"},
         "resource_type": {"type": "string"},
@@ -426,20 +552,6 @@ AUDIT_LOG_ENTRY_SCHEMA = {
     },
     "additionalProperties": False,
 }
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-def validate_schema(test_case, data, schema, msg=""):
-    """Validate data against a JSON schema; on error, fail the test."""
-    try:
-        jsonschema.validate(instance=data, schema=schema)
-    except jsonschema.ValidationError as e:
-        test_case.fail(f"Schema validation failed{' (' + msg + ')' if msg else ''}: {e.message}\n"
-                       f"Path: {list(e.absolute_path)}\n"
-                       f"Instance: {e.instance}")
 
 
 # ---------------------------------------------------------------------------
@@ -869,18 +981,14 @@ class WidgetSchemaTests(BaseSchemaTest):
         client = APIClient()
         resp = client.get(f"/api/v1/widget/summary/{token}/")
         data = resp.data
-        # Required by widget types
-        self.assertIn("id", data)
-        self.assertIn("summary_en", data)
-        self.assertIn("summary_es", data)
-        self.assertIn("reading_level", data)
-        self.assertIn("medical_terms_explained", data)
-        self.assertIn("disclaimer_text", data)
-        self.assertIn("encounter_date", data)
-        self.assertIn("doctor_name", data)
-        self.assertIn("delivery_status", data)
-        self.assertIn("viewed_at", data)
-        self.assertIn("created_at", data)
+        # Required by widget/src/types.ts WidgetSummaryData
+        required_fields = [
+            "id", "summary_en", "summary_es", "reading_level",
+            "medical_terms_explained", "disclaimer_text", "encounter_date",
+            "doctor_name", "delivery_status", "viewed_at", "created_at",
+        ]
+        for field in required_fields:
+            self.assertIn(field, data, f"Missing WidgetSummaryData field: {field}")
 
 
 class PracticeSchemaTests(BaseSchemaTest):
