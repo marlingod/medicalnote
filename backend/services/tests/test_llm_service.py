@@ -60,9 +60,10 @@ class LLMServiceTest(TestCase):
         assert result["summary_en"] == "Summary"
         mock_client.messages.create.assert_called_once()
 
-    @patch("google.generativeai.GenerativeModel")
-    @patch("google.generativeai.configure")
-    def test_provider_routing_gemini_only(self, mock_configure, mock_model_cls):
+    @override_settings(GCP_PROJECT_ID="test-project", GCP_LOCATION="us-central1")
+    @patch("vertexai.init")
+    @patch("vertexai.generative_models.GenerativeModel")
+    def test_provider_routing_gemini_only(self, mock_model_cls, mock_init):
         mock_model = MagicMock()
         mock_model_cls.return_value = mock_model
         mock_response = MagicMock()
@@ -73,10 +74,11 @@ class LLMServiceTest(TestCase):
         result = service.generate_soap_note("Patient has headache.", "1.0.0")
         assert result["subjective"] == "S"
 
-    @patch("google.generativeai.GenerativeModel")
-    @patch("google.generativeai.configure")
+    @override_settings(GCP_PROJECT_ID="test-project", GCP_LOCATION="us-central1")
+    @patch("vertexai.init")
+    @patch("vertexai.generative_models.GenerativeModel")
     @patch("anthropic.Anthropic")
-    def test_provider_routing_claude_plus_gemini(self, mock_anthropic_cls, mock_configure, mock_model_cls):
+    def test_provider_routing_claude_plus_gemini(self, mock_anthropic_cls, mock_model_cls, mock_init):
         # Claude for SOAP
         mock_claude = MagicMock()
         mock_anthropic_cls.return_value = mock_claude

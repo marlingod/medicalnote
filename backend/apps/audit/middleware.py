@@ -38,12 +38,6 @@ METHOD_TO_ACTION = {
 
 class HIPAAAuditMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
-        if not hasattr(request, "user") or not request.user.is_authenticated:
-            return response
-
-        if response.status_code >= 400:
-            return response
-
         path = request.path
         matched_resource = None
         resource_id = None
@@ -60,20 +54,44 @@ class HIPAAAuditMiddleware(MiddlewareMixin):
         if matched_resource is None:
             return response
 
+        # Determine user and outcome
+        user = None
+        user_role = ""
+        if hasattr(request, "user") and request.user.is_authenticated:
+            user = request.user
+            user_role = getattr(request.user, "role", "")
+
+        outcome = "success" if response.status_code < 400 else "failure"
+        if response.status_code >= 500:
+            outcome = "error"
+
         action = METHOD_TO_ACTION.get(request.method, "view")
+
+        # Get session ID safely
+        session_id = ""
+        if hasattr(request, "session") and request.session.session_key:
+            session_id = request.session.session_key
 
         try:
             from apps.audit.models import AuditLog
 
             AuditLog.objects.create(
-                user=request.user,
+                user=user,
                 action=action,
                 resource_type=matched_resource,
                 resource_id=uuid.UUID(resource_id) if resource_id else uuid.uuid4(),
                 ip_address=self._get_client_ip(request),
                 user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 phi_accessed=True,
-                details={"path": path, "method": request.method, "status_code": response.status_code},
+                outcome=outcome,
+                user_role=user_role,
+                session_id=session_id,
+                source_system="api",
+                details={
+                    "path": path,
+                    "method": request.method,
+                    "status_code": response.status_code,
+                },
             )
         except Exception as e:
             logger.error(f"Failed to create audit log: {e}")

@@ -12,6 +12,9 @@ class AuditLog(models.Model):
         DELETE = "delete", "Delete"
         EXPORT = "export", "Export"
         SHARE = "share", "Share"
+        LOGIN_FAILED = "login_failed", "Login Failed"
+        BREAK_GLASS = "break_glass", "Break Glass"
+        DISCLOSE = "disclose", "Disclose"
 
     class ResourceType(models.TextChoices):
         PATIENT = "patient", "Patient"
@@ -23,20 +26,37 @@ class AuditLog(models.Model):
         QUALITY_SCORE = "quality_score", "Quality Score"
         TELEHEALTH = "telehealth", "Telehealth"
         FHIR_PUSH = "fhir_push", "FHIR Push"
+        DISCLOSURE = "disclosure", "Disclosure"
+
+    class Outcome(models.TextChoices):
+        SUCCESS = "success", "Success"
+        FAILURE = "failure", "Failure"
+        ERROR = "error", "Error"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="audit_logs",
+        null=True,
+        blank=True,
     )
-    action = models.CharField(max_length=10, choices=Action.choices)
+    action = models.CharField(max_length=20, choices=Action.choices)
     resource_type = models.CharField(max_length=20, choices=ResourceType.choices)
     resource_id = models.UUIDField()
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True, default="")
     phi_accessed = models.BooleanField(default=False)
     details = models.JSONField(default=dict, blank=True)
+    outcome = models.CharField(
+        max_length=10,
+        choices=Outcome.choices,
+        default=Outcome.SUCCESS,
+    )
+    user_role = models.CharField(max_length=20, blank=True, default="")
+    session_id = models.CharField(max_length=64, blank=True, default="")
+    source_system = models.CharField(max_length=50, default="api")
+    archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -46,7 +66,8 @@ class AuditLog(models.Model):
         default_permissions = ("add", "view")
 
     def __str__(self):
-        return f"{self.action} {self.resource_type} by {self.user_id} at {self.created_at}"
+        user_desc = self.user_id or "anonymous"
+        return f"{self.action} {self.resource_type} by {user_desc} at {self.created_at}"
 
     def save(self, *args, **kwargs):
         if self._state.adding:
@@ -56,3 +77,35 @@ class AuditLog(models.Model):
 
     def delete(self, *args, **kwargs):
         raise PermissionDenied("Audit logs cannot be deleted.")
+
+
+class BreakGlassAccess(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="break_glass_accesses",
+    )
+    patient = models.ForeignKey(
+        "patients.Patient",
+        on_delete=models.CASCADE,
+        related_name="break_glass_accesses",
+    )
+    reason = models.TextField()
+    approved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="break_glass_approvals",
+    )
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "break_glass_accesses"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"BreakGlass by {self.user_id} for patient {self.patient_id}"

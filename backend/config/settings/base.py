@@ -2,9 +2,23 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key-change-in-production")
+
+def _require_env(name: str) -> str:
+    """Return env var or raise if missing — secrets must never have defaults."""
+    value = os.environ.get(name)
+    if not value:
+        raise ImproperlyConfigured(
+            f"Required environment variable '{name}' is not set. "
+            f"Set it in your environment or .env file."
+        )
+    return value
+
+
+SECRET_KEY = _require_env("DJANGO_SECRET_KEY")
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -29,7 +43,9 @@ INSTALLED_APPS = [
     "django_filters",
     "corsheaders",
     "channels",
+    "axes",
     # Local apps
+    "apps.core",
     "apps.accounts",
     "apps.patients",
     "apps.encounters",
@@ -37,6 +53,7 @@ INSTALLED_APPS = [
     "apps.summaries",
     "apps.widget",
     "apps.audit",
+    "apps.compliance",
     "apps.realtime",
     "apps.templates",
     "apps.quality",
@@ -46,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "csp.middleware.CSPMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -54,7 +72,15 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
     "apps.audit.middleware.HIPAAAuditMiddleware",
+    "apps.accounts.middleware.MFAEnforcementMiddleware",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -96,6 +122,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "apps.accounts.validators.UppercaseValidator"},
+    {"NAME": "apps.accounts.validators.LowercaseValidator"},
+    {"NAME": "apps.accounts.validators.SpecialCharacterValidator"},
+    {"NAME": "apps.accounts.validators.PasswordHistoryValidator"},
 ]
 
 PASSWORD_HASHERS = [
@@ -149,7 +179,7 @@ REST_FRAMEWORK = {
 # SimpleJWT
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=24),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -205,11 +235,8 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
-# Encryption key for django-encrypted-model-fields
-FIELD_ENCRYPTION_KEY = os.environ.get(
-    "FIELD_ENCRYPTION_KEY",
-    "bTzU1e8gzOEaqJsig_fvQSOuBPAdQL4bzJiFsA00DkY=",
-)
+# Encryption key for django-encrypted-model-fields — NO DEFAULT (HIPAA)
+FIELD_ENCRYPTION_KEY = _require_env("FIELD_ENCRYPTION_KEY")
 
 # AWS Settings
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
@@ -227,9 +254,13 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
-# Gemini API (Google)
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# Google Vertex AI (HIPAA-eligible — replaces consumer Gemini API)
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "")
+GCP_LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+
+# Anthropic BAA confirmation (must be explicitly set in production)
+ANTHROPIC_BAA_CONFIRMED = os.environ.get("ANTHROPIC_BAA_CONFIRMED", "false").lower() == "true"
 
 # Twilio (OTP)
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
@@ -247,6 +278,11 @@ X_FRAME_OPTIONS = "DENY"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "phi_sanitization": {
+            "()": "config.logging_filters.PHISanitizationFilter",
+        },
+    },
     "formatters": {
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
@@ -257,6 +293,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["phi_sanitization"],
         },
     },
     "root": {
@@ -265,10 +302,33 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "workers": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
+
+# django-axes — account lockout after failed login attempts (HIPAA §164.312(d))
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=30)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_CALLABLE = None
+AXES_VERBOSE = False
+
+# MFA Configuration (HIPAA §164.312(d))
+MFA_ENFORCEMENT_ENABLED = os.environ.get("MFA_ENFORCEMENT_ENABLED", "true").lower() == "true"
+MFA_SUPPORTED_TYPES = ["totp"]
+MFA_TOTP_PERIOD = 30
+MFA_RECOVERY_CODE_COUNT = 10
+
+# Content Security Policy (CSP)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'",)
+CSP_IMG_SRC = ("'self'", "data:")
+CSP_FONT_SRC = ("'self'",)
+CSP_CONNECT_SRC = ("'self'",)
+CSP_FRAME_SRC = ("'none'",)
+CSP_OBJECT_SRC = ("'none'",)
 
 # FHIR Integration
 FHIR_DEFAULT_TIMEOUT = 30  # seconds

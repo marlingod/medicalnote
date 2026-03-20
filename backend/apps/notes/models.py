@@ -3,6 +3,8 @@ import uuid
 from django.db import models
 from encrypted_model_fields.fields import EncryptedTextField
 
+from apps.core.fields import EncryptedJSONField
+
 
 class PromptVersion(models.Model):
     class PromptName(models.TextChoices):
@@ -46,8 +48,8 @@ class ClinicalNote(models.Model):
     assessment = EncryptedTextField(blank=True, default="")
     plan = EncryptedTextField(blank=True, default="")
     raw_content = EncryptedTextField(blank=True, default="")
-    icd10_codes = models.JSONField(default=list, blank=True)
-    cpt_codes = models.JSONField(default=list, blank=True)
+    icd10_codes = EncryptedJSONField(default=list, blank=True)
+    cpt_codes = EncryptedJSONField(default=list, blank=True)
     ai_generated = models.BooleanField(default=False)
     doctor_edited = models.BooleanField(default=False)
     approved_at = models.DateTimeField(null=True, blank=True)

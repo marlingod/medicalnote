@@ -15,7 +15,7 @@ argon2-cffi>=23.1,<24.0
 psycopg2-binary>=2.9,<3.0
 boto3>=1.35,<2.0
 anthropic>=0.40,<1.0
-google-generativeai>=0.8,<1.0
+google-cloud-aiplatform>=1.74,<2.0
 twilio>=9.0,<10.0
 firebase-admin>=6.5,<7.0
 gunicorn>=22.0,<23.0
@@ -24,6 +24,8 @@ redis>=5.0,<6.0
 # FHIR
 fhir.resources>=7.1,<8.0
 requests>=2.31,<3.0
+django-axes>=8.3,<9.0
+django-csp>=4.0,<5.0
 # Testing
 pytest>=8.0,<9.0
 pytest-django>=4.9,<5.0

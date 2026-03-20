@@ -3,6 +3,8 @@ import uuid
 from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
 
+from apps.core.fields import EncryptedJSONField
+
 
 class Encounter(models.Model):
     class InputMethod(models.TextChoices):
@@ -121,8 +123,8 @@ class Transcript(models.Model):
         related_name="transcript",
     )
     raw_text = EncryptedTextField()
-    speaker_segments = models.JSONField(default=list)
-    medical_terms_detected = models.JSONField(default=list)
+    speaker_segments = EncryptedJSONField(default=list)
+    medical_terms_detected = EncryptedJSONField(default=list)
     confidence_score = models.FloatField(default=0.0)
     language_detected = models.CharField(max_length=10, default="en")
     created_at = models.DateTimeField(auto_now_add=True)

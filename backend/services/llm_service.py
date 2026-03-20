@@ -4,6 +4,8 @@ from enum import Enum
 
 from django.conf import settings
 
+from services.phi_sanitizer import PHISanitizer
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +55,13 @@ class ClaudeClient:
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         self.model = getattr(settings, "CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
+        if not getattr(settings, "ANTHROPIC_BAA_CONFIRMED", False):
+            logger.warning(
+                "ANTHROPIC_BAA_CONFIRMED is not set to 'true'. "
+                "A signed BAA with Anthropic is REQUIRED before sending PHI. "
+                "Set ANTHROPIC_BAA_CONFIRMED=true after BAA is executed."
+            )
+
     def call(self, system_prompt: str, user_content: str, max_tokens: int = 4096) -> str:
         response = self.client.messages.create(
             model=self.model,
@@ -64,19 +73,32 @@ class ClaudeClient:
 
 
 class GeminiClient:
-    """Google Gemini API client."""
+    """Google Vertex AI Gemini client (HIPAA-eligible under GCP BAA)."""
 
     def __init__(self):
-        import google.generativeai as genai
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        import vertexai
+        from vertexai.generative_models import GenerativeModel
+
+        project_id = getattr(settings, "GCP_PROJECT_ID", "")
+        location = getattr(settings, "GCP_LOCATION", "us-central1")
+
+        if not project_id:
+            raise ValueError(
+                "GCP_PROJECT_ID is required for Vertex AI. "
+                "The consumer google-generativeai API is NOT HIPAA-eligible."
+            )
+
+        vertexai.init(project=project_id, location=location)
         self.model_name = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+        self._GenerativeModel = GenerativeModel
 
     def call(self, system_prompt: str, user_content: str, max_tokens: int = 4096) -> str:
-        import google.generativeai as genai
-        model = genai.GenerativeModel(
+        from vertexai.generative_models import GenerationConfig
+
+        model = self._GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_prompt,
-            generation_config=genai.GenerationConfig(
+            generation_config=GenerationConfig(
                 max_output_tokens=max_tokens,
                 temperature=0.3,
             ),
@@ -170,6 +192,7 @@ class LLMService:
     # ── Public Methods ─────────────────────────────────────────────────────────
 
     def generate_soap_note(self, transcript_text: str, prompt_version: str) -> dict:
+        transcript_text = PHISanitizer.sanitize_for_llm(transcript_text)
         raw = self._call_llm("soap_note", SOAP_SYSTEM_PROMPT, transcript_text)
         result = self._parse_json(raw)
         required_keys = {"subjective", "objective", "assessment", "plan"}
@@ -189,6 +212,7 @@ class LLMService:
             language="English and Spanish" if language == "en" else language,
         )
         note_text = f"Subjective: {subjective}\nObjective: {objective}\nAssessment: {assessment}\nPlan: {plan}"
+        note_text = PHISanitizer.sanitize_for_llm(note_text)
         raw = self._call_llm("patient_summary", system, note_text)
         result = self._parse_json(raw)
         if "summary_en" not in result:

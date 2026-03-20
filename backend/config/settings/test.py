@@ -1,3 +1,9 @@
+import os
+
+# Set test-only defaults BEFORE importing base (which calls _require_env)
+os.environ.setdefault("DJANGO_SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("FIELD_ENCRYPTION_KEY", "bTzU1e8gzOEaqJsig_fvQSOuBPAdQL4bzJiFsA00DkY=")
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
@@ -31,7 +37,11 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-FIELD_ENCRYPTION_KEY = "bTzU1e8gzOEaqJsig_fvQSOuBPAdQL4bzJiFsA00DkY="
-
 # Skip email verification in tests for auth flows
 ACCOUNT_EMAIL_VERIFICATION = "none"
+
+# Disable axes lockout in tests unless explicitly testing it
+AXES_ENABLED = False
+
+# Disable MFA enforcement in tests unless explicitly testing it
+MFA_ENFORCEMENT_ENABLED = False

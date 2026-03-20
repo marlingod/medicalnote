@@ -43,3 +43,38 @@ class HIPAAAuditMiddlewareTest(TestCase):
         self.client.get("/admin/")  # Non-PHI endpoint
         # Middleware should not log admin panel
         assert AuditLog.objects.count() == initial_count
+
+    def test_failed_request_is_logged(self):
+        """Regression: middleware previously had early exit for status >= 400.
+        Verify that 4xx responses on PHI endpoints now create audit logs."""
+        # Force-authenticate so we isolate the 400 from the view, not auth
+        self.client.force_authenticate(user=self.doctor)
+        # Submit an invalid patient create (missing required fields)
+        response = self.client.post(
+            "/api/v1/patients/",
+            {},
+            format="json",
+        )
+        assert response.status_code == 400
+        logs = AuditLog.objects.filter(
+            user=self.doctor,
+            resource_type="patient",
+            action="create",
+            outcome="failure",
+        )
+        assert logs.count() >= 1
+        log = logs.first()
+        assert log.phi_accessed is True
+        assert log.details["status_code"] == 400
+
+    def test_unauthenticated_request_to_phi_endpoint_is_logged(self):
+        """Unauthenticated requests to PHI endpoints should be logged with user=None."""
+        unauthenticated_client = APIClient()
+        response = unauthenticated_client.get(f"/api/v1/patients/{self.patient.id}/")
+        assert response.status_code in (401, 403)
+        logs = AuditLog.objects.filter(
+            user=None,
+            resource_type="patient",
+            outcome="failure",
+        )
+        assert logs.count() >= 1

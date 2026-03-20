@@ -1,3 +1,9 @@
+import os
+
+# Set dev-only defaults BEFORE importing base (which calls _require_env)
+os.environ.setdefault("DJANGO_SECRET_KEY", "insecure-dev-key-change-in-production")
+os.environ.setdefault("FIELD_ENCRYPTION_KEY", "bTzU1e8gzOEaqJsig_fvQSOuBPAdQL4bzJiFsA00DkY=")
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = True

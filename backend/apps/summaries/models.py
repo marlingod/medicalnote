@@ -3,6 +3,8 @@ import uuid
 from django.db import models
 from encrypted_model_fields.fields import EncryptedTextField
 
+from apps.core.fields import EncryptedJSONField
+
 
 class PatientSummary(models.Model):
     class ReadingLevel(models.TextChoices):
@@ -40,7 +42,7 @@ class PatientSummary(models.Model):
         choices=ReadingLevel.choices,
         default=ReadingLevel.GRADE_8,
     )
-    medical_terms_explained = models.JSONField(default=list, blank=True)
+    medical_terms_explained = EncryptedJSONField(default=list, blank=True)
     disclaimer_text = models.TextField(
         default="This summary is for informational purposes only and does not constitute medical advice."
     )

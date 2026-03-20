@@ -133,3 +133,21 @@ class DeviceToken(models.Model):
 
     def __str__(self):
         return f"DeviceToken({self.platform}) for {self.user.email}"
+
+
+class PasswordHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_history",
+    )
+    password_hash = models.CharField(max_length=256)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "password_history"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PasswordHistory for {self.user_id} at {self.created_at}"
